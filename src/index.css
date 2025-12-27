@@ -1,0 +1,376 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   PREMIUM FONT FACES
+   ============================================ */
+
+/* ITC Clearface - Display/Heading Font (Serif) */
+@font-face {
+  font-family: 'Clearface';
+  src: url('/fonts/ClearfaceStd-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Clearface';
+  src: url('/fonts/ClearfaceStd-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Clearface';
+  src: url('/fonts/ClearfaceStd-Heavy.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Clearface';
+  src: url('/fonts/ClearfaceStd-Black.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Apercu - Body/UI Font (Sans-Serif) */
+@font-face {
+  font-family: 'Apercu';
+  src: url('/fonts/Apercu-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Apercu';
+  src: url('/fonts/Apercu-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Apercu';
+  src: url('/fonts/Apercu-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Apercu';
+  src: url('/fonts/Apercu-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Inter - Fallback */
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-VariableFont_slnt,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ============================================
+   CSS CUSTOM PROPERTIES (Design Tokens)
+   ============================================ */
+
+@layer base {
+  :root {
+    /* Toast Colors */
+    --toast-bg: #ffffff;
+    --toast-color: #1f2937;
+
+    /* Elevation System - Light Mode */
+    --shadow-flat: none;
+    --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-elevated: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+    --shadow-floating: 0 10px 20px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-prominent: 0 20px 30px -5px rgba(0, 0, 0, 0.12), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+    /* Card Gradients - Light Mode */
+    --card-gradient: linear-gradient(145deg, #ffffff 0%, #f9fafb 100%);
+    --card-gradient-hover: linear-gradient(145deg, #ffffff 0%, #f3f4f6 100%);
+
+    /* Border Colors */
+    --border-subtle: rgba(0, 0, 0, 0.03);
+    --border-default: rgba(0, 0, 0, 0.06);
+  }
+
+  .dark {
+    --toast-bg: #1e293b;
+    --toast-color: #f1f5f9;
+
+    /* Elevation System - Dark Mode (warmer tones) */
+    --shadow-flat: none;
+    --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15);
+    --shadow-elevated: 0 4px 6px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-floating: 0 10px 20px -3px rgba(0, 0, 0, 0.45), 0 4px 6px -2px rgba(0, 0, 0, 0.25);
+    --shadow-prominent: 0 20px 30px -5px rgba(0, 0, 0, 0.55), 0 10px 10px -5px rgba(0, 0, 0, 0.35);
+
+    /* Card Gradients - Dark Mode (warmer) */
+    --card-gradient: linear-gradient(145deg, #1f2937 0%, #1a222e 100%);
+    --card-gradient-hover: linear-gradient(145deg, #232d3b 0%, #1f2937 100%);
+
+    /* Border Colors - Dark */
+    --border-subtle: rgba(255, 255, 255, 0.03);
+    --border-default: rgba(255, 255, 255, 0.06);
+  }
+
+  /* ============================================
+     GLOBAL STYLES
+     ============================================ */
+
+  html {
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-gray-50 text-anthracite dark:bg-gray-900 dark:text-gray-100;
+    font-family: 'Apercu', 'Inter', system-ui, sans-serif;
+    line-height: 1.6;
+  }
+
+  /* Typography - Clearface for headings */
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: 'Clearface', Georgia, serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  h1 {
+    @apply text-3xl md:text-4xl;
+    line-height: 1.15;
+  }
+
+  h2 {
+    @apply text-2xl;
+    line-height: 1.2;
+  }
+
+  h3 {
+    @apply text-xl;
+    line-height: 1.3;
+    font-weight: 600;
+  }
+
+  p {
+    @apply text-base;
+    line-height: 1.65;
+  }
+
+  /* Improved focus indicators */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-900 rounded;
+  }
+
+  /* Screen reader only */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
+/* ============================================
+   COMPONENT UTILITIES
+   ============================================ */
+
+@layer components {
+
+  /* Unified Card System */
+  .card {
+    background: var(--card-gradient);
+    border: 1px solid var(--border-subtle);
+    @apply rounded-2xl;
+    box-shadow: var(--shadow-raised);
+    transition: all 0.2s ease;
+  }
+
+  .card:hover {
+    background: var(--card-gradient-hover);
+    box-shadow: var(--shadow-elevated);
+  }
+
+  .card-elevated {
+    background: var(--card-gradient);
+    border: 1px solid var(--border-default);
+    @apply rounded-3xl;
+    box-shadow: var(--shadow-elevated);
+    transition: all 0.25s ease;
+  }
+
+  .card-elevated:hover {
+    background: var(--card-gradient-hover);
+    box-shadow: var(--shadow-floating);
+    transform: translateY(-1px);
+  }
+
+  .card-floating {
+    background: var(--card-gradient);
+    border: 1px solid var(--border-default);
+    @apply rounded-3xl;
+    box-shadow: var(--shadow-floating);
+    transition: all 0.3s ease;
+  }
+
+  .card-floating:hover {
+    box-shadow: var(--shadow-prominent);
+    transform: translateY(-2px);
+  }
+
+  /* Button Variants */
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-xl;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.98) translateY(0);
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold rounded-xl;
+    transition: all 0.2s ease;
+  }
+
+  .btn-secondary:hover {
+    @apply bg-gray-200 dark:bg-gray-700;
+  }
+
+  .btn-secondary:active {
+    transform: scale(0.98);
+  }
+
+  /* FAB (Floating Action Button) with pulse */
+  .fab {
+    @apply fixed bottom-6 right-6 w-16 h-16 rounded-full;
+    @apply bg-gradient-to-br from-emerald-500 to-teal-500 text-white;
+    @apply flex items-center justify-center;
+    box-shadow: 0 6px 24px rgba(16, 185, 129, 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 40;
+  }
+
+  .fab:hover {
+    transform: scale(1.08);
+    box-shadow: 0 8px 32px rgba(16, 185, 129, 0.5);
+  }
+
+  .fab:active {
+    transform: scale(1.02);
+  }
+
+  /* Icon Button */
+  .icon-btn {
+    @apply p-2.5 rounded-xl transition-all duration-200;
+    @apply bg-gray-100 dark:bg-gray-800;
+    @apply hover:bg-gray-200 dark:hover:bg-gray-700;
+    @apply active:scale-95;
+  }
+
+  /* Skeleton Loaders */
+  .skeleton {
+    @apply bg-gray-200 dark:bg-gray-700 rounded-lg;
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-pulse {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.5;
+    }
+  }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+@layer utilities {
+
+  /* Glass Effect */
+  .glass {
+    @apply backdrop-blur-md;
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .dark .glass {
+    background: rgba(31, 41, 55, 0.9);
+  }
+
+  /* Text Gradient */
+  .text-gradient {
+    @apply bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 bg-clip-text text-transparent;
+  }
+
+  /* Micro-animations */
+  .hover-lift {
+    transition: transform 0.2s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  .hover-scale {
+    transition: transform 0.2s ease;
+  }
+
+  .hover-scale:hover {
+    transform: scale(1.02);
+  }
+
+  .hover-glow {
+    transition: box-shadow 0.3s ease;
+  }
+
+  .hover-glow:hover {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

@@ -1,0 +1,134 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '../../test/test-utils';
+import userEvent from '@testing-library/user-event';
+import App from '../../App';
+
+// Mock data service
+vi.mock('../../services/dataService', () => ({
+  fetchWeightData: vi.fn(() => Promise.resolve([
+    {
+      date: '2025-01-01',
+      weekDay: 'Wednesday',
+      weight: 100,
+      changePercent: 0,
+      changeKg: 0,
+      dailyChange: 0,
+    },
+  ])),
+  fetchTargetData: vi.fn(() => Promise.resolve({
+    startDate: '2025-01-01',
+    startWeight: 100,
+    endDate: '2025-07-01',
+    endWeight: 80,
+    totalDuration: 181,
+    totalKg: 20,
+    height: 170,
+  })),
+  addWeightEntry: vi.fn((entry) => Promise.resolve([
+    {
+      date: '2025-01-01',
+      weekDay: 'Wednesday',
+      weight: 100,
+      changePercent: 0,
+      changeKg: 0,
+      dailyChange: 0,
+    },
+    {
+      date: entry.date || '2025-01-08',
+      weekDay: 'Wednesday',
+      weight: entry.weight || 99,
+      changePercent: -1,
+      changeKg: -1,
+      dailyChange: -0.14,
+    },
+  ])),
+  updateWeightEntry: vi.fn(),
+  deleteWeightEntry: vi.fn(),
+  updateTargetData: vi.fn(),
+}));
+
+// Mock achievement service
+vi.mock('../../services/achievementService', () => ({
+  loadAchievements: vi.fn(() => []),
+  checkAchievements: vi.fn(() => ({ achievements: [], newlyUnlocked: [] })),
+  getAchievementStats: vi.fn(() => ({ total: 0, unlocked: 0, percentComplete: 0, byCategory: {} })),
+  saveAchievements: vi.fn(),
+}));
+
+describe('Add Weight Entry Integration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should allow user to add a new weight entry', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Wait for app to load
+    await waitFor(() => {
+      expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
+    });
+
+    // Click the floating action button to open modal
+    const addButton = screen.getByRole('button', { name: /add weight entry/i });
+    await user.click(addButton);
+
+    // Modal should be open
+    await waitFor(() => {
+      expect(screen.getByText(/Add Weight Entry/)).toBeInTheDocument();
+    });
+
+    // Fill in the form
+    const weightInput = screen.getByLabelText(/weight/i);
+    const dateInput = screen.getByLabelText(/date/i);
+
+    await user.clear(weightInput);
+    await user.type(weightInput, '99');
+
+    await user.clear(dateInput);
+    await user.type(dateInput, '2025-01-08');
+
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /save/i });
+    await user.click(submitButton);
+
+    // Modal should close and success toast should appear
+    await waitFor(() => {
+      expect(screen.queryByText(/Add Weight Entry/)).not.toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Weight entry added successfully/)).toBeInTheDocument();
+    });
+  });
+
+  it('should validate weight input', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
+    });
+
+    const addButton = screen.getByRole('button', { name: /add weight entry/i });
+    await user.click(addButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Add Weight Entry/)).toBeInTheDocument();
+    });
+
+    const weightInput = screen.getByLabelText(/weight/i);
+
+    // Try to enter invalid weight (too low)
+    await user.clear(weightInput);
+    await user.type(weightInput, '30');
+
+    const submitButton = screen.getByRole('button', { name: /save/i });
+    await user.click(submitButton);
+
+    // Should show validation error
+    await waitFor(() => {
+      expect(screen.getByText(/must be between/i)).toBeInTheDocument();
+    });
+  });
+});
