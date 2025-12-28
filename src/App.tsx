@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
-import { Scale, Plus, TrendingUp } from 'lucide-react';
+import { useEffect, useState, useMemo, lazy, Suspense, useRef, useCallback } from 'react';
+import { Scale, Plus, TrendingUp, Heart, Dumbbell, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { WeightEntry, TargetData, Statistics } from './types';
@@ -32,6 +32,32 @@ const OnboardingModal = lazy(() => import('./components/OnboardingModal').then(m
 const SmartTips = lazy(() => import('./components/SmartTips').then(m => ({ default: m.SmartTips })));
 const AIInsights = lazy(() => import('./components/AIInsights').then(m => ({ default: m.AIInsights })));
 
+// V2: Better loading component for lazy-loaded items
+function IconButtonSkeleton() {
+  return (
+    <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse flex items-center justify-center">
+      <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+    </div>
+  );
+}
+
+// P4: Debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,14 +70,20 @@ function App() {
   const [showTrendsPage, setShowTrendsPage] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+  // P4: Track if we've done initial achievement check
+  const initialCheckDoneRef = useRef(false);
+
   // Memoize statistics calculation - only recalculate when entries or targetData change
   const stats = useMemo<Statistics | null>(() => {
     if (entries.length === 0 || !targetData) return null;
     return calculateStatistics(entries, targetData);
   }, [entries, targetData]);
 
+  // P4: Debounce entries for achievement checking (300ms delay)
+  const debouncedEntries = useDebounce(entries, 300);
+
   // Load data function - can be called on mount and after sync
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -63,13 +95,12 @@ function App() {
       setEntries(weightEntries);
       setTargetData(target);
     } catch (error) {
-      console.error('Error loading data:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       setError(`Failed to load your weight data: ${errorMessage}. Please try again.`);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -81,13 +112,26 @@ function App() {
     if (!onboardingCompleted) {
       setShowOnboarding(true);
     }
-  }, []);
+  }, [loadData]);
 
-  // Check for new achievements whenever entries or stats change
+  // P4: Check for new achievements with debouncing
   useEffect(() => {
-    if (entries.length > 0 && targetData && stats) {
+    if (debouncedEntries.length > 0 && targetData && stats) {
+      // Skip the initial check on mount to avoid duplicate celebration
+      if (!initialCheckDoneRef.current) {
+        initialCheckDoneRef.current = true;
+        // Just load achievements without showing celebration on initial load
+        const { achievements: updatedAchievements } = checkAchievements(
+          debouncedEntries,
+          targetData,
+          stats
+        );
+        setAchievements(updatedAchievements);
+        return;
+      }
+
       const { achievements: updatedAchievements, newlyUnlocked } = checkAchievements(
-        entries,
+        debouncedEntries,
         targetData,
         stats
       );
@@ -99,7 +143,7 @@ function App() {
         setCelebrationAchievement(newlyUnlocked[0]);
       }
     }
-  }, [entries, stats, targetData]);
+  }, [debouncedEntries, stats, targetData]);
 
   const handleRetry = () => {
     setError(null);
@@ -196,7 +240,7 @@ function App() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-emerald-50/20 to-teal-50/20 dark:from-gray-900 dark:via-emerald-950/20 dark:to-teal-950/20">
         <div className="max-w-md mx-auto text-center p-8">
           <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-4xl">⚠️</span>
+            <span className="text-4xl">!</span>
           </div>
           <h2 className="text-2xl font-bold text-anthracite dark:text-gray-100 mb-3">Oops! Something went wrong</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
@@ -222,7 +266,8 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-emerald-50/20 to-teal-50/20 dark:from-gray-900 dark:via-emerald-950/20 dark:to-teal-950/20 relative">
+    // V3: Added pb-24 for FAB safe area on mobile
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-emerald-50/20 to-teal-50/20 dark:from-gray-900 dark:via-emerald-950/20 dark:to-teal-950/20 relative pb-24 md:pb-8">
       <SkipToContent />
 
       {/* Header - Redesigned with compact height and refined styling */}
@@ -251,7 +296,7 @@ function App() {
 
               {/* Goal Simulator - hidden on smaller screens */}
               <div className="hidden lg:block">
-                <Suspense fallback={<div className="w-10 h-10" />}>
+                <Suspense fallback={<IconButtonSkeleton />}>
                   <GoalSimulator
                     currentWeight={stats.current.weight}
                     currentTargetData={targetData}
@@ -262,13 +307,13 @@ function App() {
 
               {/* Export - hidden on mobile */}
               <div className="hidden md:block">
-                <Suspense fallback={<div className="w-10 h-10" />}>
+                <Suspense fallback={<IconButtonSkeleton />}>
                   <ExportMenu entries={entries} targetData={targetData} stats={stats} />
                 </Suspense>
               </div>
 
               {/* Achievements */}
-              <Suspense fallback={<div className="w-10 h-10" />}>
+              <Suspense fallback={<IconButtonSkeleton />}>
                 <AchievementsGallery achievements={achievements} />
               </Suspense>
 
@@ -283,7 +328,7 @@ function App() {
               </button>
 
               {/* Settings */}
-              <Suspense fallback={<div className="w-10 h-10" />}>
+              <Suspense fallback={<IconButtonSkeleton />}>
                 <Settings
                   onSyncComplete={loadData}
                   entries={entries}
@@ -372,14 +417,18 @@ function App() {
           </Suspense>
         </motion.section>
 
-        {/* Footer */}
+        {/* V7: Footer with SVG icons instead of emojis */}
         <motion.footer className="text-center text-gray-500 dark:text-gray-400 text-sm py-8" variants={staggerItem}>
-          <p>Built with ❤️ using React & TypeScript</p>
-          <p className="mt-2">Keep pushing towards your goals! 💪</p>
+          <p className="flex items-center justify-center gap-1.5">
+            Built with <Heart className="w-4 h-4 text-red-500 fill-red-500" /> using React & TypeScript
+          </p>
+          <p className="mt-2 flex items-center justify-center gap-1.5">
+            Keep pushing towards your goals! <Dumbbell className="w-4 h-4 text-emerald-500" />
+          </p>
         </motion.footer>
       </motion.main>
 
-      {/* Floating Action Button */}
+      {/* V3: FAB with safe positioning */}
       <motion.button
         onClick={handleAddEntry}
         className="fab"
