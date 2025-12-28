@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Mic, MicOff } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -7,14 +7,37 @@ interface VoiceInputProps {
     onWeightDetected: (weight: number) => void;
 }
 
+// S8: Rate limiting - minimum time between voice input attempts (ms)
+const RATE_LIMIT_MS = 1000;
+
 export function VoiceInput({ onWeightDetected }: VoiceInputProps) {
     const [isListening, setIsListening] = useState(false);
     const [isSupported, setIsSupported] = useState(false);
-    const [recognition, setRecognition] = useState<any>(null);
+
+    // P7: Use ref to store recognition instance to avoid memory leak
+    const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+    // S8: Rate limiting ref
+    const lastAttemptRef = useRef<number>(0);
+    const isInitializedRef = useRef(false);
+
+    // Memoize the weight detection callback
+    const handleWeightDetected = useCallback((weight: number) => {
+        onWeightDetected(weight);
+    }, [onWeightDetected]);
 
     useEffect(() => {
+        // Prevent double initialization in strict mode
+        if (isInitializedRef.current) return;
+        isInitializedRef.current = true;
+
         // Check if browser supports Web Speech API
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        const SpeechRecognition = (window as typeof window & {
+            SpeechRecognition?: typeof window.SpeechRecognition;
+            webkitSpeechRecognition?: typeof window.SpeechRecognition;
+        }).SpeechRecognition || (window as typeof window & {
+            webkitSpeechRecognition?: typeof window.SpeechRecognition;
+        }).webkitSpeechRecognition;
 
         if (SpeechRecognition) {
             setIsSupported(true);
@@ -24,15 +47,16 @@ export function VoiceInput({ onWeightDetected }: VoiceInputProps) {
             recognitionInstance.interimResults = false;
             recognitionInstance.lang = 'en-US';
 
-            recognitionInstance.onresult = (event: any) => {
+            recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
                 const transcript = event.results[0][0].transcript.toLowerCase();
-                console.log('Voice input:', transcript);
+
+                // S7: Removed console.log for sensitive voice data
 
                 // Try to extract weight from transcript
                 const weight = extractWeight(transcript);
 
                 if (weight) {
-                    onWeightDetected(weight);
+                    handleWeightDetected(weight);
                     toast.success(`Weight detected: ${weight} kg`);
                 } else {
                     toast.error('Could not understand weight. Please try again.');
@@ -41,14 +65,21 @@ export function VoiceInput({ onWeightDetected }: VoiceInputProps) {
                 setIsListening(false);
             };
 
-            recognitionInstance.onerror = (event: any) => {
-                console.error('Speech recognition error:', event.error);
+            recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
+                // S7: Only log non-sensitive error types in development
+                if (process.env.NODE_ENV === 'development') {
+                    // Avoid logging the full event which may contain sensitive data
+                    console.warn('Speech recognition error type:', event.error);
+                }
+
                 setIsListening(false);
 
                 if (event.error === 'no-speech') {
                     toast.error('No speech detected. Please try again.');
                 } else if (event.error === 'not-allowed') {
                     toast.error('Microphone access denied. Please enable it in your browser settings.');
+                } else if (event.error === 'aborted') {
+                    // User cancelled, no need to show error
                 } else {
                     toast.error('Voice input error. Please try again.');
                 }
@@ -58,37 +89,63 @@ export function VoiceInput({ onWeightDetected }: VoiceInputProps) {
                 setIsListening(false);
             };
 
-            setRecognition(recognitionInstance);
+            // P7: Store in ref instead of state
+            recognitionRef.current = recognitionInstance;
         } else {
             setIsSupported(false);
         }
 
+        // P7: Proper cleanup using ref
         return () => {
-            if (recognition) {
-                recognition.stop();
+            if (recognitionRef.current) {
+                try {
+                    recognitionRef.current.abort();
+                } catch {
+                    // Ignore errors during cleanup
+                }
+                recognitionRef.current = null;
             }
+            isInitializedRef.current = false;
         };
-    }, []);
+    }, [handleWeightDetected]);
 
-    const startListening = () => {
+    const startListening = useCallback(() => {
+        const recognition = recognitionRef.current;
+
+        // S8: Rate limiting check
+        const now = Date.now();
+        if (now - lastAttemptRef.current < RATE_LIMIT_MS) {
+            toast.error('Please wait a moment before trying again.');
+            return;
+        }
+        lastAttemptRef.current = now;
+
         if (recognition && !isListening) {
             try {
                 recognition.start();
                 setIsListening(true);
-                toast('🎤 Listening... Say your weight (e.g., "95.5 kilograms" or "95.5 kg")');
-            } catch (error) {
-                console.error('Error starting recognition:', error);
+                toast('Listening... Say your weight (e.g., "95.5 kilograms")', {
+                    icon: '🎤',
+                    duration: 3000,
+                });
+            } catch {
+                // S7: Removed error logging
                 toast.error('Could not start voice input. Please try again.');
             }
         }
-    };
+    }, [isListening]);
 
-    const stopListening = () => {
+    const stopListening = useCallback(() => {
+        const recognition = recognitionRef.current;
         if (recognition && isListening) {
-            recognition.stop();
+            try {
+                recognition.stop();
+            } catch {
+                // Ignore errors when stopping
+            }
             setIsListening(false);
         }
-    };
+    }, [isListening]);
 
     if (!isSupported) {
         return null; // Don't render if not supported
@@ -136,8 +193,6 @@ function extractWeight(transcript: string): number | null {
             return weight;
         }
     }
-
-    // Try alternative patterns could be added here for better accuracy
 
     return null;
 }

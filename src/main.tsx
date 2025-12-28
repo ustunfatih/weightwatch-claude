@@ -9,8 +9,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider>
       <App />
+      {/* V5: Toast with proper dark mode theming */}
       <Toaster
         position="top-right"
+        containerClassName="toast-container"
         toastOptions={{
           duration: 3000,
           style: {
@@ -18,6 +20,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             color: 'var(--toast-color)',
             borderRadius: '12px',
             padding: '16px',
+            boxShadow: 'var(--shadow-floating)',
           },
           success: {
             iconTheme: {
@@ -38,15 +41,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 )
 
 // Register service worker for PWA offline support
+// S7: Removed console.log statements
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/sw.js')
-      .then((registration) => {
-        console.log('Service Worker registered:', registration);
-      })
-      .catch((error) => {
-        console.log('Service Worker registration failed:', error);
+      .catch(() => {
+        // Service worker registration failed silently
       });
   });
 }

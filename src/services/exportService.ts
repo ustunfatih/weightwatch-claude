@@ -1,16 +1,50 @@
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { WeightEntry, TargetData, Statistics } from '../types';
 import { format } from 'date-fns';
 
 /**
- * Export weight data to CSV
+ * Escape a CSV cell to prevent CSV injection attacks
+ * Dangerous characters: =, +, -, @, \t, \r, \n
+ * These can be used to inject formulas in Excel/Google Sheets
+ */
+function escapeCSVCell(value: string): string {
+  // If the value contains dangerous characters at the start, prefix with single quote
+  const dangerousChars = ['=', '+', '-', '@', '\t', '\r'];
+  const needsEscape = dangerousChars.some(char => value.startsWith(char));
+
+  // Also escape if contains comma, quote, or newline
+  const hasSpecialChars = /[",\n\r]/.test(value);
+
+  if (needsEscape) {
+    // Prefix with single quote to prevent formula execution
+    value = "'" + value;
+  }
+
+  if (hasSpecialChars || needsEscape) {
+    // Wrap in quotes and escape existing quotes
+    return '"' + value.replace(/"/g, '""') + '"';
+  }
+
+  return value;
+}
+
+/**
+ * Escape an entire CSV row
+ */
+function escapeCSVRow(row: (string | number | undefined)[]): string {
+  return row.map(cell => {
+    if (cell === undefined || cell === null) return '';
+    return escapeCSVCell(String(cell));
+  }).join(',');
+}
+
+/**
+ * Export weight data to CSV (with injection protection)
  */
 export async function exportToCSV(entries: WeightEntry[], targetData: TargetData): Promise<void> {
   // CSV Header
   const headers = ['Date', 'Day', 'Weight (kg)', 'Change %', 'Change (kg)', 'Daily Change (kg)'];
 
-  // CSV Rows
+  // CSV Rows with proper escaping
   const rows = entries.map(entry => [
     entry.date,
     entry.weekDay,
@@ -31,10 +65,10 @@ export async function exportToCSV(entries: WeightEntry[], targetData: TargetData
   rows.push(['Total to Lose (kg)', targetData.totalKg.toString(), '', '', '', '']);
   rows.push(['Height (cm)', targetData.height.toString(), '', '', '', '']);
 
-  // Convert to CSV string
+  // Convert to CSV string with proper escaping
   const csvContent = [
-    headers.join(','),
-    ...rows.map(row => row.join(',')),
+    escapeCSVRow(headers),
+    ...rows.map(row => escapeCSVRow(row)),
   ].join('\n');
 
   // Create blob and download
@@ -54,13 +88,19 @@ export async function exportToCSV(entries: WeightEntry[], targetData: TargetData
 }
 
 /**
- * Export dashboard to PDF
+ * Export dashboard to PDF (lazy loaded)
  */
 export async function exportToPDF(elementId: string, filename?: string): Promise<void> {
   const element = document.getElementById(elementId);
   if (!element) {
     throw new Error(`Element with id "${elementId}" not found`);
   }
+
+  // Lazy load heavy libraries
+  const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+    import('jspdf'),
+    import('html2canvas'),
+  ]);
 
   // Capture element as canvas
   const canvas = await html2canvas(element, {

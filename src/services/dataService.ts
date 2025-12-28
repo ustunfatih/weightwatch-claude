@@ -73,14 +73,39 @@ function calculateDerivedFields(
   };
 }
 
-// Recalculate all derived fields for all entries
-function recalculateEntries(entries: WeightEntry[]): WeightEntry[] {
+/**
+ * P3: Optimized recalculation - only recalculates from the affected index onward
+ * instead of recalculating all entries every time
+ */
+function recalculateEntriesFromIndex(entries: WeightEntry[], startIndex: number = 0): WeightEntry[] {
+  if (entries.length === 0) return [];
+
   const sorted = [...entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  return sorted.map((entry, index) => {
-    const previousEntry = index > 0 ? sorted[index - 1] : null;
-    return calculateDerivedFields(entry, previousEntry);
-  });
+  // Only recalculate from startIndex onward
+  const actualStartIndex = Math.max(0, startIndex);
+
+  for (let i = actualStartIndex; i < sorted.length; i++) {
+    const previousEntry = i > 0 ? sorted[i - 1] : null;
+    sorted[i] = calculateDerivedFields(sorted[i], previousEntry);
+  }
+
+  return sorted;
+}
+
+/**
+ * Find the index where a new entry would be inserted (for optimized recalculation)
+ */
+function findInsertionIndex(entries: WeightEntry[], date: string): number {
+  const newDate = new Date(date).getTime();
+  const sorted = [...entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  for (let i = 0; i < sorted.length; i++) {
+    if (new Date(sorted[i].date).getTime() >= newDate) {
+      return i;
+    }
+  }
+  return sorted.length;
 }
 
 // Get entries from localStorage or return mock data
@@ -113,22 +138,17 @@ function getStoredTargetData(): TargetData {
   return mockTargetData;
 }
 
+// P1: Removed artificial delays - localStorage operations are synchronous
 export async function fetchWeightData(): Promise<WeightEntry[]> {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
   return getStoredEntries();
 }
 
 export async function fetchTargetData(): Promise<TargetData> {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
   return getStoredTargetData();
 }
 
-// Add a new weight entry
+// Add a new weight entry (P3: optimized recalculation)
 export async function addWeightEntry(entry: Partial<WeightEntry>): Promise<WeightEntry[]> {
-  await new Promise(resolve => setTimeout(resolve, 300));
-
   const entries = getStoredEntries();
 
   // Check if entry with this date already exists
@@ -148,50 +168,52 @@ export async function addWeightEntry(entry: Partial<WeightEntry>): Promise<Weigh
 
   entries.push(newEntry);
 
-  // Recalculate all derived fields
-  const updatedEntries = recalculateEntries(entries);
+  // P3: Only recalculate from the insertion point onward
+  const insertionIndex = findInsertionIndex(entries, newEntry.date);
+  const updatedEntries = recalculateEntriesFromIndex(entries, insertionIndex);
 
   localStorage.setItem(STORAGE_KEYS.WEIGHT_ENTRIES, JSON.stringify(updatedEntries));
   return updatedEntries;
 }
 
-// Update an existing weight entry
+// Update an existing weight entry (P3: optimized recalculation)
 export async function updateWeightEntry(date: string, updates: Partial<WeightEntry>): Promise<WeightEntry[]> {
-  await new Promise(resolve => setTimeout(resolve, 300));
-
   const entries = getStoredEntries();
-  const index = entries.findIndex(e => e.date === date);
+  const sorted = [...entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const index = sorted.findIndex(e => e.date === date);
 
   if (index === -1) {
     throw new Error('Entry not found');
   }
 
   // Update the entry
-  entries[index] = {
-    ...entries[index],
+  sorted[index] = {
+    ...sorted[index],
     ...updates,
   };
 
-  // Recalculate all derived fields
-  const updatedEntries = recalculateEntries(entries);
+  // P3: Only recalculate from this index onward
+  const updatedEntries = recalculateEntriesFromIndex(sorted, index);
 
   localStorage.setItem(STORAGE_KEYS.WEIGHT_ENTRIES, JSON.stringify(updatedEntries));
   return updatedEntries;
 }
 
-// Delete a weight entry
+// Delete a weight entry (P3: optimized recalculation)
 export async function deleteWeightEntry(date: string): Promise<WeightEntry[]> {
-  await new Promise(resolve => setTimeout(resolve, 300));
-
   const entries = getStoredEntries();
-  const filtered = entries.filter(e => e.date !== date);
+  const sorted = [...entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const index = sorted.findIndex(e => e.date === date);
 
-  if (filtered.length === entries.length) {
+  if (index === -1) {
     throw new Error('Entry not found');
   }
 
-  // Recalculate all derived fields
-  const updatedEntries = recalculateEntries(filtered);
+  // Remove the entry
+  sorted.splice(index, 1);
+
+  // P3: Only recalculate from the deletion point onward
+  const updatedEntries = recalculateEntriesFromIndex(sorted, index);
 
   localStorage.setItem(STORAGE_KEYS.WEIGHT_ENTRIES, JSON.stringify(updatedEntries));
   return updatedEntries;
@@ -199,18 +221,9 @@ export async function deleteWeightEntry(date: string): Promise<WeightEntry[]> {
 
 // Update target data
 export async function updateTargetData(updates: Partial<TargetData>): Promise<TargetData> {
-  await new Promise(resolve => setTimeout(resolve, 300));
-
   const currentTarget = getStoredTargetData();
   const updatedTarget = { ...currentTarget, ...updates };
 
   localStorage.setItem(STORAGE_KEYS.TARGET_DATA, JSON.stringify(updatedTarget));
   return updatedTarget;
 }
-
-// Future: Google Sheets API integration
-// export async function fetchFromGoogleSheets(): Promise<{ entries: WeightEntry[], target: TargetData }> {
-//   const SHEET_ID = '1te4QfcgjiMIHYAmRar0EdFyiVeOs2D-lj8lXGE0lqmk';
-//   const API_KEY = 'your-api-key';
-//   // Implementation here
-// }

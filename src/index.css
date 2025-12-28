@@ -270,14 +270,24 @@
     transform: scale(0.98);
   }
 
-  /* FAB (Floating Action Button) with pulse */
+  /* V3: FAB (Floating Action Button) with safe mobile positioning */
   .fab {
-    @apply fixed bottom-6 right-6 w-16 h-16 rounded-full;
+    @apply fixed w-16 h-16 rounded-full;
     @apply bg-gradient-to-br from-emerald-500 to-teal-500 text-white;
     @apply flex items-center justify-center;
+    /* V3: Safe area positioning - higher on mobile to avoid overlap */
+    bottom: max(1.5rem, env(safe-area-inset-bottom, 1.5rem));
+    right: 1.5rem;
     box-shadow: 0 6px 24px rgba(16, 185, 129, 0.4);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 40;
+  }
+
+  @media (max-width: 768px) {
+    .fab {
+      /* V3: Higher position on mobile for better reach and visibility */
+      bottom: max(5rem, calc(env(safe-area-inset-bottom, 1rem) + 4rem));
+    }
   }
 
   .fab:hover {
@@ -287,6 +297,27 @@
 
   .fab:active {
     transform: scale(1.02);
+  }
+
+  /* V4: Standardized border radius design tokens */
+  .radius-sm { border-radius: 0.5rem; }   /* 8px - small elements */
+  .radius-md { border-radius: 0.75rem; }  /* 12px - buttons, inputs */
+  .radius-lg { border-radius: 1rem; }     /* 16px - cards */
+  .radius-xl { border-radius: 1.25rem; }  /* 20px - modals */
+  .radius-2xl { border-radius: 1.5rem; }  /* 24px - hero sections */
+  .radius-full { border-radius: 9999px; } /* pills, avatars */
+
+  /* V5: Toast notification theming */
+  .toast-container > div {
+    background: var(--toast-bg) !important;
+    color: var(--toast-color) !important;
+    border-radius: 0.75rem !important;
+    box-shadow: var(--shadow-floating) !important;
+  }
+
+  /* Toast dark mode specific styling */
+  .dark .toast-container > div {
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   /* Icon Button */
