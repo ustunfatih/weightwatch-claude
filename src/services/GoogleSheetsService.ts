@@ -32,9 +32,10 @@ class GoogleSheetsService {
       const script = document.createElement('script');
       script.src = 'https://apis.google.com/js/api.js';
       script.onload = () => {
-        (window as typeof window & { gapi: typeof gapi }).gapi.load('client', async () => {
+        const gapiLib = (window as unknown as { gapi: typeof gapi }).gapi;
+        gapiLib.load('client', async () => {
           try {
-            await (window as typeof window & { gapi: typeof gapi }).gapi.client.init({
+            await gapiLib.client.init({
               apiKey: '', // Not needed for OAuth flow
               discoveryDocs: DISCOVERY_DOCS,
             });
@@ -68,8 +69,8 @@ class GoogleSheetsService {
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.onload = () => {
-      const google = (window as typeof window & { google: typeof globalThis.google }).google;
-      this.tokenClient = google.accounts.oauth2.initTokenClient({
+      const googleLib = (window as unknown as { google: typeof google }).google;
+      this.tokenClient = googleLib.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: SCOPES,
         callback: () => {}, // Will be set during login
@@ -101,7 +102,7 @@ class GoogleSheetsService {
 
     return new Promise((resolve, reject) => {
       const originalCallback = this.tokenClient!.callback;
-      this.tokenClient!.callback = (response) => {
+      this.tokenClient!.callback = (response: { error?: string }) => {
         this.tokenClient!.callback = originalCallback;
         if (response.error) {
           reject(new Error(response.error));
@@ -119,8 +120,8 @@ class GoogleSheetsService {
    * S6: Validate that the token has the required scopes
    */
   private validateTokenScopes(): boolean {
-    const gapi = (window as typeof window & { gapi: typeof globalThis.gapi }).gapi;
-    const token = gapi?.client?.getToken();
+    const gapiLib = (window as unknown as { gapi?: typeof gapi }).gapi;
+    const token = gapiLib?.client?.getToken();
 
     if (!token) return false;
 
@@ -160,8 +161,8 @@ class GoogleSheetsService {
         }
       };
 
-      const gapi = (window as typeof window & { gapi: typeof globalThis.gapi }).gapi;
-      if (gapi.client.getToken() === null) {
+      const gapiLib = (window as unknown as { gapi: typeof gapi }).gapi;
+      if (gapiLib.client.getToken() === null) {
         this.tokenClient.requestAccessToken({ prompt: 'consent' });
       } else {
         this.tokenClient.requestAccessToken({ prompt: '' });
@@ -180,13 +181,13 @@ class GoogleSheetsService {
       this.tokenRefreshTimer = null;
     }
 
-    const gapi = (window as typeof window & { gapi: typeof globalThis.gapi }).gapi;
-    const google = (window as typeof window & { google: typeof globalThis.google }).google;
+    const gapiLib = (window as unknown as { gapi?: typeof gapi }).gapi;
+    const googleLib = (window as unknown as { google: typeof google }).google;
 
-    const token = gapi?.client?.getToken();
-    if (token !== null) {
-      google.accounts.oauth2.revoke(token.access_token);
-      gapi.client.setToken(null);
+    const token = gapiLib?.client?.getToken();
+    if (token) {
+      googleLib.accounts.oauth2.revoke(token.access_token);
+      gapiLib?.client?.setToken(null);
     }
   }
 
@@ -194,8 +195,8 @@ class GoogleSheetsService {
    * Check if user is signed in
    */
   isSignedIn(): boolean {
-    const gapi = (window as typeof window & { gapi?: typeof globalThis.gapi }).gapi;
-    return gapi?.client?.getToken() !== null;
+    const gapiLib = (window as unknown as { gapi?: typeof gapi }).gapi;
+    return gapiLib?.client?.getToken() !== null;
   }
 
   /**
@@ -259,8 +260,8 @@ class GoogleSheetsService {
     this.updateSyncStatus('syncing');
 
     try {
-      const gapi = (window as typeof window & { gapi: typeof globalThis.gapi }).gapi;
-      const response = await gapi.client.sheets.spreadsheets.values.get({
+      const gapiLib = (window as unknown as { gapi: typeof gapi }).gapi;
+      const response = await gapiLib.client.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
         range: 'Weight Data!A2:F', // Skip header row
       });
@@ -298,8 +299,8 @@ class GoogleSheetsService {
     this.updateSyncStatus('syncing');
 
     try {
-      const gapi = (window as typeof window & { gapi: typeof globalThis.gapi }).gapi;
-      const response = await gapi.client.sheets.spreadsheets.values.get({
+      const gapiLib = (window as unknown as { gapi: typeof gapi }).gapi;
+      const response = await gapiLib.client.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
         range: 'Target!B2:B8', // Value column only
       });
@@ -338,7 +339,7 @@ class GoogleSheetsService {
     this.updateSyncStatus('syncing');
 
     try {
-      const gapi = (window as typeof window & { gapi: typeof globalThis.gapi }).gapi;
+      const gapiLib = (window as unknown as { gapi: typeof gapi }).gapi;
 
       // Sort entries by date
       const sortedEntries = [...entries].sort(
@@ -356,13 +357,13 @@ class GoogleSheetsService {
       ]);
 
       // Clear existing data (except header)
-      await gapi.client.sheets.spreadsheets.values.clear({
+      await gapiLib.client.sheets.spreadsheets.values.clear({
         spreadsheetId: this.spreadsheetId,
         range: 'Weight Data!A2:F',
       });
 
       // Write new data
-      await gapi.client.sheets.spreadsheets.values.update({
+      await gapiLib.client.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
         range: 'Weight Data!A2',
         valueInputOption: 'USER_ENTERED',
@@ -393,7 +394,7 @@ class GoogleSheetsService {
     this.updateSyncStatus('syncing');
 
     try {
-      const gapi = (window as typeof window & { gapi: typeof globalThis.gapi }).gapi;
+      const gapiLib = (window as unknown as { gapi: typeof gapi }).gapi;
 
       const row = [
         entry.date,
@@ -404,7 +405,7 @@ class GoogleSheetsService {
         entry.dailyChange,
       ];
 
-      await gapi.client.sheets.spreadsheets.values.append({
+      await gapiLib.client.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
         range: 'Weight Data!A2',
         valueInputOption: 'USER_ENTERED',
@@ -435,7 +436,7 @@ class GoogleSheetsService {
     this.updateSyncStatus('syncing');
 
     try {
-      const gapi = (window as typeof window & { gapi: typeof globalThis.gapi }).gapi;
+      const gapiLib = (window as unknown as { gapi: typeof gapi }).gapi;
 
       const values = [
         [targetData.startDate],
@@ -447,7 +448,7 @@ class GoogleSheetsService {
         [targetData.height],
       ];
 
-      await gapi.client.sheets.spreadsheets.values.update({
+      await gapiLib.client.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
         range: 'Target!B2:B8',
         valueInputOption: 'USER_ENTERED',
