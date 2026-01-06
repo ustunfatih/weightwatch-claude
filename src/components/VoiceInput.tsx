@@ -32,17 +32,12 @@ export function VoiceInput({ onWeightDetected }: VoiceInputProps) {
         isInitializedRef.current = true;
 
         // Check if browser supports Web Speech API
-        const SpeechRecognition = (window as typeof window & {
-            SpeechRecognition?: typeof window.SpeechRecognition;
-            webkitSpeechRecognition?: typeof window.SpeechRecognition;
-        }).SpeechRecognition || (window as typeof window & {
-            webkitSpeechRecognition?: typeof window.SpeechRecognition;
-        }).webkitSpeechRecognition;
+        const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-        if (SpeechRecognition) {
+        if (SpeechRecognitionAPI) {
             setIsSupported(true);
 
-            const recognitionInstance = new SpeechRecognition();
+            const recognitionInstance = new SpeechRecognitionAPI();
             recognitionInstance.continuous = false;
             recognitionInstance.interimResults = false;
             recognitionInstance.lang = 'en-US';
@@ -67,7 +62,7 @@ export function VoiceInput({ onWeightDetected }: VoiceInputProps) {
 
             recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
                 // S7: Only log non-sensitive error types in development
-                if (process.env.NODE_ENV === 'development') {
+                if (import.meta.env.DEV) {
                     // Avoid logging the full event which may contain sensitive data
                     console.warn('Speech recognition error type:', event.error);
                 }

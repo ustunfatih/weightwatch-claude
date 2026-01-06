@@ -101,19 +101,21 @@ function validateAchievement(achievement: unknown): Achievement | null {
     const a = achievement as Record<string, unknown>;
 
     if (typeof a.id !== 'string' || a.id.length === 0 || a.id.length > 50) return null;
-    if (typeof a.name !== 'string') return null;
+    if (typeof a.title !== 'string') return null;
     if (typeof a.description !== 'string') return null;
     if (typeof a.icon !== 'string') return null;
     if (!['milestone', 'consistency', 'progress', 'special'].includes(a.category as string)) return null;
-    if (typeof a.unlocked !== 'boolean') return null;
+    if (typeof a.isUnlocked !== 'boolean') return null;
+    if (typeof a.requirement !== 'number') return null;
 
     return {
-        id: sanitizeString(a.id) as Achievement['id'],
-        name: sanitizeString(a.name),
+        id: sanitizeString(a.id),
+        title: sanitizeString(a.title),
         description: sanitizeString(a.description),
         icon: sanitizeString(a.icon),
         category: a.category as Achievement['category'],
-        unlocked: a.unlocked,
+        requirement: a.requirement,
+        isUnlocked: a.isUnlocked,
         unlockedAt: typeof a.unlockedAt === 'string' ? sanitizeString(a.unlockedAt) : undefined,
     };
 }
